@@ -1,0 +1,124 @@
+---
+title: "Day 15 EDA in R"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Day 15: EDA in R - HOMEWORK
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+
+property <- read.csv("housepricesdata.csv")
+View(property)
+property <- as.data.frame(property)
+```
+
+### Penjelasan Kolom
+
+1.  Unit_Name - nama unit property secara lengkap
+2.  No_Rooms - banyaknya kamar, '0' berarti ruangnya tipe Studio. 1 berarti 1 bedroom, dst.
+3.  Locality, Region - alamat property
+4.  Longitude, Latitude - alamat property, tapi dalam Longitude dan Latitude
+5.  Furnished - 1 jika Fully Furnished, 0 jika Non-Furnished
+6.  Area - Luas property
+7.  TotalFacilities - Jumlah fasilitas yang ada di property tersebut
+8.  Currency - mata uang yang digunakan dalam menuliskan harga sewa tahunan
+9. Annual_Price - harga sewa tahunan untuk satu unit property
+
+### Soal 1: Apakah Kolom Annual_Price sudah rapih?
+
+Apakah angka-angka dalam Annual_Price sudah dapat menunjukan harga sesungguhnya dari property-property yang ada di data kita? Jika dirasa belum bersih, buat column baru namanya `Clean_Price` yang merupakan nilai `Annual_Price` yang telah di'bersihkan'. Catatan: gunakan kurs 1 USD = 14 500 IDR, dan sebaiknya gunakan mata uang IDR saja.
+
+```{r}
+### Tulis Kode di Sini
+property %>% glimpse()
+```
+
+```{r}
+property_clean = property %>%
+  mutate(Clean_Price= case_when(Currency == "USD" ~ Annual_Price*14000, Currency == "IDR" ~ Annual_Price*1))
+```
+
+```{r}
+View(property_clean)
+```
+
+
+Tulis jawaban di sini:
+Angka - angka pada kolom Annual Price sudah dikonversi ke mata uang IDR dan dibuat kolom baru bernama Clean_Prce.
+
+===============================================================
+
+### Soal 2: Setelah membersihkan Annual_Price, mari kita lihat data harga untuk property tipe Studio. Apakah ada yang janggal?
+
+Perhatikan property-property dengan No_Rooms = 0 (tipe studio) dan lihat harganya. Apakah ada yang janggal? Jika ya, sebutkan kejanggalannya, dan mengapa hal tersebut kira-kira bisa terjadi?
+
+
+
+```{r}
+# first layer: data
+property_clean %>% 
+  # second layer: aesthetics
+  ggplot(aes(
+    x = Clean_Price, 
+    y = Bathroom,
+    color = No_Rooms
+  )) +
+  # third layer: geometric form
+  geom_point()
+```
+
+```{r}
+unusual <- property_clean %>%
+  filter(Clean_Price > 600000000000)%>%
+  select(Clean_Price, No_Rooms, Unit_Name, Tower, Furnished, Region, Locality, Area, Total_Facilities)%>%
+  arrange(Clean_Price)
+  
+unusual
+```
+```{r}
+unusual2 <- property_clean %>%
+  select(Clean_Price, No_Rooms, Furnished, Tower,  Region, Locality, Area, Total_Facilities)%>%
+  arrange(desc(Total_Facilities))
+  
+unusual2
+```
+
+
+
+
+Tuliskan jawabanmu di sini:
+Ya, terdapat kejanggalan. Kejanggalannya adalah unit dengan tipe studio bernama Signature Park Grande Studio Fully Furnished yang harganya jauh di atas rata - rata. Padahal tipe studio seharusnya cenderung lebih murah. Hal ini bisa terjadi karena studio tersebut sudah full furnished dan memiliki Total Facilities di atas rata - rata.
+===================================================================
+
+### Soal 3: Sekarang, mari kita lihat kolom alamat. Especially Longitude dan Latitude. Apakah ada data yang janggal?
+
+Untuk kejanggalan di Longitude, apakah kejanggalan tersebut bisa dijelaskan? Apakah masuk akal?
+
+Untuk kejanggalan di Latitude, apakah kejanggalan tersebut bisa dijelaskan? Apakah masuk akal?
+
+Ada beberapa 'outlier' yang 'bisa dijelaskan' dan make sense, ada juga yang tidak wajar dan hampir dapat dipastikan merupakan kesalahan. Di antara Longitude dan Latitude, mana yang wajar, dan mana yang tidak wajar?
+
+```{r}
+#### Tuliskan kode di sini
+
+ggplot(property_clean, aes(x = No_Rooms , y = Longitude, color = Region)) +
+  geom_point()
+```
+```{r}
+ggplot(property_clean, aes(x = No_Rooms , y = Latitude, color = Region)) +
+  geom_point()
+```
+
+Tuliskan jawabanmu di sini:
+
+Untuk kejanggalan di Longitude, kejanggalan terdapat pada Region Makassar, yaitu sebuah outlier titik Longitude yang berada jauh dari sebaran Region lain dan hal ini masih wajar karena Makassar berada di dekat garis khatulistiwa di mana berada jauh dari Region yang lainya (jauh di bawah garis khatulistiwa)
+
+Untuk kejanggalan di Latitude, kejanggalan terdapat pada Region Tangerang dan daerah Jakarta. Terdapat outlier di titik Latitude di atas 4. Padahal seharusnya daerah Tangerang dan Jakarta berada di titik Latitude di bawah 0. Maka dapat dipastikan kejanggalan ini merupakan kesalahan dan tidak wajar.
+
+====================================================================
