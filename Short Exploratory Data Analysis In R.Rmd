@@ -1,0 +1,120 @@
+---
+title: Short Exploratory Data Analysis in R
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+
+property <- read.csv("housepricesdata.csv")
+View(property)
+property <- as.data.frame(property)
+```
+### Column Explanation
+
+1.  Unit_Name - the full name of the property unit
+2.  No_Rooms - number of rooms, '0' means the room is Studio type. 1 means 1 bedroom, etc
+3.  Locality, Region - property address
+4.  Longitude, Latitude - address property, in Longitude and Latitude
+5.  Furnished - 1 if Fully Furnished, 0 if Non-Furnished
+6.  Area - Property area
+7.  TotalFacilities - the number of facilities available on the property
+8.  Currency - the currency used in writing the annual rental price
+9. Annual_Price - annual rental price for one unit of property
+
+
+### Cleaning the Annual Price Column
+
+Create a new column with the name `Clean_Price` which is the value of `Annual_Price` which has been 'cleaned'.
+That is changing the USD exchange rate to the Rupiah exchange rate.
+(Note: 1 USD = 14 500 IDR).
+```{r}
+### Displays dataset information (column name, column data type, multiple observations per column)
+property %>% glimpse()
+```
+
+```{r}
+### Change the USD exchange rate to the Rupiah exchange rate
+
+property_clean = property %>%
+  mutate(Clean_Price= case_when(Currency == "USD" ~ Annual_Price*14000, Currency == "IDR" ~ Annual_Price*1))
+```
+
+```{r}
+View(property_clean)
+```
+
+===============================================================
+
+### Perform a short EDA on property prices using ggplot
+
+
+```{r}
+# first layer: data
+property_clean %>% 
+  # second layer: aesthetics
+  ggplot(aes(
+    x = Clean_Price, 
+    y = Bathroom,
+    color = No_Rooms
+  )) +
+  # third layer: geometric form
+  geom_point()
+```
+It was found that there was 1 odd price data. That is above 600000000000 IDR.
+This is a fantastic number. Then filtering is carried out to find out which units are
+have those prices.
+
+```{r}
+unusual <- property_clean %>%
+  filter(Clean_Price > 600000000000)%>%
+  select(Clean_Price, No_Rooms, Unit_Name, Tower, Furnished, Region, Locality, Area, Total_Facilities)%>%
+  arrange(Clean_Price)
+  
+unusual
+```
+```{r}
+unusual2 <- property_clean %>%
+  select(Clean_Price, No_Rooms, Furnished, Tower,  Region, Locality, Area, Total_Facilities)%>%
+  arrange(desc(Total_Facilities))
+  
+unusual2
+```
+EDA Results:
+
+Yes, there are discrepancies. The oddity is that it is a studio type unit called Signature Park Grande Studio Fully Furnished which costs far above the average. Though the studio type should tend to be cheaper. This can happen because there was a price imputation error from the start. Because the price value is fantastic, it can be estimated from the start the exchange rate is not USD, but IDR or other exchange rates which are then multiplied by 14000 to be converted into the IDR exchange rate.
+===================================================================
+
+### Perform short EDA on latitude and longitude columns using ggplot
+
+```{r}
+
+ggplot(property_clean, aes(x = No_Rooms , y = Longitude, color = Region)) +
+  geom_point()
+```
+```{r}
+ggplot(property_clean, aes(x = No_Rooms , y = Latitude, color = Region)) +
+  geom_point()
+```
+EDA Results:
+
+For irregularities in Longitude, the oddity is in the Makassar Region, which is an outlier of the Longitude point which is far from the distribution of other Regions and this is still reasonable because Makassar is near the equator which is far from the other Regions (far below the equator).
+
+For the oddities in Latitude, there are irregularities in the Tangerang Region and the Jakarta area. There are outliers at Latitude points above 4. Even though the Tangerang and Jakarta areas should be at Latitude points below 0. So it can be ascertained that this discrepancy is an error and is not natural.
+
+====================================================================
+
+
+Final conclusion:
+
+Based on the brief EDA that was conducted, there were unreasonable discrepancies.
+In a dataset this can happen, not all the data we receive is data
+which is definitely true on the whole. So, in addition to getting insight or information from
+dataset, EDA also serves to check the suitability of the data. If there are any discrepancies
+does not make sense, then confirmation can be made to the party providing the dataset.
